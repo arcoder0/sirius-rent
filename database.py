@@ -96,5 +96,3 @@ def init_db() -> None:
     password_hash TEXT
     );
     """)
-
-init_db()
