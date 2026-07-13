@@ -396,7 +396,7 @@ def create_booking(booking: BookingCreate) -> dict:
             )
 
         user = cursor.execute(
-            "SELECT password_hash FROM users WHERE username = ?", (username,)
+            "SELECT password_hash FROM users WHERE username LIKE ?", (username,)
         ).fetchone()
 
         if not user:
@@ -430,7 +430,7 @@ def cancel_booking(booking_id: int, username: str, password: str) -> None:
         cursor = conn.cursor()
 
         user = cursor.execute(
-            "SELECT password_hash FROM users WHERE username = ?", (username,)
+            "SELECT password_hash FROM users WHERE username LIKE ?", (username,)
         ).fetchone()
 
         if not user:
@@ -532,7 +532,7 @@ def register(username: str, password: str) -> None:
         cursor = conn.cursor()
 
         conflict = cursor.execute(
-            "SELECT username FROM users WHERE username = ?",
+            "SELECT username FROM users WHERE username LIKE ?",
             (username,)
         ).fetchone()
 
