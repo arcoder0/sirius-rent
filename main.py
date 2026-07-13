@@ -45,6 +45,11 @@ class BookingCreate(BaseModel):
     username: str
     password: str
 
+class RoomUpdate(BaseModel):
+    name: str | None = None
+    capacity: int | None = None
+    equipment: list[str] | None = None
+
 # Работа с паролями
 
 def hash_password(password: str) -> str:
@@ -239,12 +244,12 @@ def get_room_by_id(room_id: int) -> dict:
         return room_info
     
 @app.put("/rooms/{room_id}", status_code=OK)
-def update_room(room_id: str, **kwargs) -> dict:
+def update_room(room_id: str, room: RoomUpdate) -> dict:
     """
     Изменяет данные о комнате.
 
     :param room_id: ID комнаты.
-    :param **kwargs: Какие данные следует изменить и на какие. ID неизменяемый, его изменение
+    :param room: Какие данные следует изменить и на какие. ID неизменяемый, его изменение
     приведёт к ошибке. Пример:
         
     ```{"name": "Конференц-зал №1", # была Комната №1
@@ -257,6 +262,11 @@ def update_room(room_id: str, **kwargs) -> dict:
         out: Новые данные комнаты. Пример:
         {"id": 1, "name": "Комната №1", "capacity": 35, "equipment": ["доска", "прожектор", "конференц-связь"]}
     """
+
+    kwargs = {k: v for k, v in room.dict().items() if v is not None}
+    
+    if "equipment" in kwargs:
+        kwargs["equipment"] = ",".join(kwargs["equipment"])
 
     if "room_id" in kwargs.keys():
         raise HTTPException(status_code=BAD_REQUEST, detail="Вы не можете изменить ID комнаты")
