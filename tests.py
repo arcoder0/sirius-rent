@@ -15,6 +15,7 @@ def create_user(username, password):
     return response.status_code
 
 assert create_user("alice", "123456") == 201
+assert create_user("aLiCE", "qwerty") == 400
 
 # 2. Создание комнаты
 
