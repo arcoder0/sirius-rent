@@ -64,7 +64,7 @@ README.md            # Документация
 | **POST** /bookings | Создание брони |
 | **DELETE** /bookings/{id} | Отмена брони |
 | **GET** /rooms/{id}/bookings?date=YYYY-MM-DD | Список броней комнаты на дату |
-| **GET** /rooms/available?start=...&end=...&capacity=... | Поиск свободных комнат в промежуток времени |
+| **GET** /rooms/available?start=...&end=...&capacity=... | Поиск свободных комнат в заданный промежуток времени |
 
 ## Docker
 Собрать и запустить проект в контейнере:
