@@ -32,7 +32,20 @@ def create_room(name, capacity, equipment):
 assert create_room(name="Комната №1", capacity=25, equipment=["доска", "прожектор"]) == 201
 assert create_room(name="Комната №2", capacity=20, equipment=["доска", "прожектор", "конференц-связь"]) == 201
 
-# 3. Создание брони
+# 3. Изменение комнаты
+
+def update_room(room_id, **kwargs):
+    response = client.put(
+        f"/rooms/{room_id}",
+        json=kwargs
+    )
+
+    print(response.json())
+    return response.status_code
+
+assert update_room(1, capacity=35) == 200
+
+# 4. Создание брони
 
 def create_booking(room_id, date, start_time, end_time, username, password):
     response = client.post(
@@ -96,7 +109,7 @@ assert create_booking(
     password="123456qwerty"
 ) == 403 # некорректная аутентификация
 
-# 4. Список доступных комнат
+# 5. Список доступных комнат
 
 def get_available_rooms(date, start_time, end_time, capacity = 0):
     response = client.get(
@@ -115,7 +128,7 @@ rooms = get_available_rooms(
 )
 assert len(rooms) == 2
 
-# 5. Получение всех броней комнаты
+# 6. Получение всех броней комнаты
 
 def get_room_bookings(room_id, date, tz, inactive = False):
     response = client.get(
@@ -129,7 +142,7 @@ def get_room_bookings(room_id, date, tz, inactive = False):
 
 assert get_room_bookings(room_id=1, date="2026-07-12", tz=3) == 200
 
-# 6. Удаление брони
+# 7. Удаление брони
 
 def cancel_booking(booking_id, username, password):
     response = client.delete(
@@ -145,7 +158,7 @@ assert cancel_booking(booking_id=1, username="alice", password="123456") == 204
 assert cancel_booking(booking_id=3, username="alice", password="123456") == 404
 assert cancel_booking(booking_id=2, username="alice", password="123456") == 204
 
-# 7. Удаление комнат
+# 8. Удаление комнат
 
 def delete_room(room_id):
     response = client.delete(
