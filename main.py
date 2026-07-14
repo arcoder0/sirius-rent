@@ -292,7 +292,7 @@ def update_room(room_id: int, room: RoomUpdate) -> dict:
             params.append(kwarg[1])
         
         query = query[:-1] # убрал лишнюю запятую в конце
-        query += "WHERE id = ?"
+        query += " WHERE id = ?"
         params.append(room_id)
 
         cursor.execute(query, params)
