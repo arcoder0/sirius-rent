@@ -130,17 +130,21 @@ def get_rooms(capacity: int = 0, equipment: list[str] | None = None) -> list[dic
     if equipment is None:
         equipment = []
 
-    if type(capacity) not in [int, float, str]:
+    def is_number(s):
+        try: float(s); return True
+        except ValueError: return False
+
+    if not isinstance(capacity, (int, float, str)):
         raise HTTPException(status_code=BAD_REQUEST, detail="Некорректный тип capacity")
-    elif type(capacity) == str and not is_number(capacity):
-        raise HTTPException(status_code=BAD_REQUEST, detial="capacity должно быть числом")
+    elif isinstance(capacity, str) and not is_number(capacity):
+        raise HTTPException(status_code=BAD_REQUEST, detail="capacity должно быть числом")
     
-    if type(equipment) not in [list, str]:
+    if not isinstance(equipment, (list, str)):
         raise HTTPException(status_code=BAD_REQUEST, detail="Некорректный тип equipment")
     
     with get_db() as conn:
         cursor = conn.cursor()
-        query = "SELECT * FROM ROOMS WHERE capacity >= ?"
+        query = "SELECT * FROM rooms WHERE capacity >= ?"
         params = [capacity]
 
         for item in equipment:
@@ -154,7 +158,7 @@ def get_rooms(capacity: int = 0, equipment: list[str] | None = None) -> list[dic
 
         for row in rows:
             rooms_info.append({
-                "room_id": row["id"],
+                "id": row["id"],
                 "name": row["name"],
                 "capacity": row["capacity"],
                 "equipment": row["equipment"].split(",")
@@ -244,7 +248,7 @@ def get_room_by_id(room_id: int) -> dict:
         return room_info
     
 @app.put("/rooms/{room_id}", status_code=OK)
-def update_room(room_id: str, room: RoomUpdate) -> dict:
+def update_room(room_id: int, room: RoomUpdate) -> dict:
     """
     Изменяет данные о комнате.
 
@@ -271,9 +275,6 @@ def update_room(room_id: str, room: RoomUpdate) -> dict:
     if "room_id" in kwargs.keys():
         raise HTTPException(status_code=BAD_REQUEST, detail="Вы не можете изменить ID комнаты")
     
-    if "equipment" in kwargs.keys():
-        kwargs["equipment"] = ",".join(kwargs["equipment"])
-
     with get_db() as conn:
         cursor = conn.cursor()
 
@@ -305,7 +306,7 @@ def update_room(room_id: str, room: RoomUpdate) -> dict:
         return room_info
 
 @app.delete("/rooms/{room_id}", status_code=NO_CONTENT)
-def delete_room(room_id: str) -> None:
+def delete_room(room_id: int) -> None:
     """
     Удаляет комнату, и все брони на неё становятся неактивными (не удаляются!).
 
@@ -326,7 +327,7 @@ def delete_room(room_id: str) -> None:
 
     return None
 
-def is_room_free(conn, room_id: int, start: str, end: str) -> int | None:
+def is_room_free(conn, room_id: int, start: int, end: int) -> int | None:
     """
     Проверяет, свободна ли комната в указанный интервал.
     Возвращает ID конфликтующей брони или None.
@@ -374,8 +375,8 @@ def create_booking(booking: BookingCreate) -> dict:
     password = booking.password
 
     try:
-        start_dt = datetime.strptime(f"{date} {start_time}", r"%Y-%m-%d %H:%M")
-        end_dt = datetime.strptime(f"{date} {end_time}", r"%Y-%m-%d %H:%M")
+        start_dt = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+        end_dt = datetime.strptime(f"{date} {end_time}", "%Y-%m-%d %H:%M")
         
         start = int(start_dt.replace(tzinfo=timezone.utc).timestamp())
         end = int(end_dt.replace(tzinfo=timezone.utc).timestamp())
@@ -406,7 +407,7 @@ def create_booking(booking: BookingCreate) -> dict:
             )
 
         user = cursor.execute(
-            "SELECT password_hash FROM users WHERE username LIKE ?", (username,)
+            "SELECT password_hash FROM users WHERE username LIKE ? COLLATE NOCASE", (username,)
         ).fetchone()
 
         if not user:
@@ -440,7 +441,7 @@ def cancel_booking(booking_id: int, username: str, password: str) -> None:
         cursor = conn.cursor()
 
         user = cursor.execute(
-            "SELECT password_hash FROM users WHERE username LIKE ?", (username,)
+            "SELECT password_hash FROM users WHERE username LIKE ? COLLATE NOCASE", (username,)
         ).fetchone()
 
         if not user:
@@ -493,39 +494,42 @@ def get_room_bookings(room_id: int, date: str, tz: int = 0, inactive: bool = Fal
 
     SECONDS_IN_DAY = 86400
     try:
-        dt = datetime.strptime(date, r"%Y-%m-%d").replace(tzinfo=timezone.utc)
+        dt = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
         start_of_day = int(dt.timestamp()) - 3600 * tz
         end_of_day = start_of_day + SECONDS_IN_DAY - 1
     except:
-        raise HTTPException(status_code=BAD_REQUEST, detail="Некорретный формат даты. Используйте YYYY-MM-DD")
+        raise HTTPException(status_code=BAD_REQUEST, detail="Некорректный формат даты. Используйте YYYY-MM-DD")
     
     with get_db() as conn:
         cursor = conn.cursor()
+
+        if tz < -12 or tz > 14:
+            raise HTTPException(BAD_REQUEST, detail="Некорректный часовой пояс")
 
         if inactive:
             bookings = cursor.execute(
                 "SELECT * FROM bookings WHERE (room_id = ? AND start >= ? AND start <= ?)",
                 (room_id, start_of_day, end_of_day)
-            )
+            ).fetchall()
         else:
             bookings = cursor.execute(
                 "SELECT * FROM bookings WHERE (room_id = ? AND start >= ? AND start <= ? AND status = 1)",
                 (room_id, start_of_day, end_of_day)
-            )
+            ).fetchall()
 
-            bookings_info = []
+        bookings_info = []
 
-            for booking in bookings:
-                bookings_info.append({
-                    "id": booking["id"],
-                    "room_id": booking["room_id"],
-                    "start": booking["start"],
-                    "end": booking["end"],
-                    "username": booking["username"],
-                    "status": booking["status"]
-                })
+        for booking in bookings:
+            bookings_info.append({
+                "id": booking["id"],
+                "room_id": booking["room_id"],
+                "start": booking["start"],
+                "end": booking["end"],
+                "username": booking["username"],
+                "status": booking["status"]
+            })
 
-            return bookings_info
+        return bookings_info
 
 @app.post("/account", status_code=CREATED)
 def register(username: str, password: str) -> None:
@@ -542,7 +546,7 @@ def register(username: str, password: str) -> None:
         cursor = conn.cursor()
 
         conflict = cursor.execute(
-            "SELECT username FROM users WHERE username LIKE ?",
+            "SELECT username FROM users WHERE username LIKE ? COLLATE NOCASE COLLATE NOCASE",
             (username,)
         ).fetchone()
 
