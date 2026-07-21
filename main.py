@@ -113,7 +113,7 @@ def create_room(room: RoomCreate) -> dict:
         return room_info
 
 @app.get("/rooms", status_code=OK)
-def get_rooms(capacity: int = 0, equipment: list[str] | None = None) -> list[dict]:
+def get_rooms(capacity: int = 0, equipment: str = None) -> list[dict]:
     """
     Возвращает список подходящих комнат (в том числе и занятых).
 
@@ -128,7 +128,9 @@ def get_rooms(capacity: int = 0, equipment: list[str] | None = None) -> list[dic
     """
 
     if equipment is None:
-        equipment = []
+        equipment = ""
+
+    equipment = equipment.split(",")
 
     def is_number(s):
         try: float(s); return True
