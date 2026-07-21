@@ -513,7 +513,7 @@ def get_room_bookings(room_id: int, date: str, tz: int = 0, inactive: bool = Fal
     with get_db() as conn:
         cursor = conn.cursor()
 
-        if tz < -12 or tz > 14:
+        if tz < -14 or tz > 12:
             raise HTTPException(BAD_REQUEST, detail="Некорректный часовой пояс")
 
         if inactive:
