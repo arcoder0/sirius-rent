@@ -449,22 +449,29 @@ def cancel_booking(booking_id: int, username: str, password: str) -> None:
         if not user:
             raise HTTPException(status_code=NOT_FOUND, detail="Пользователь не найден")
 
-        real_hash = user["password_hash"]
-
-        if not verify_password(password, real_hash):
+        if not verify_password(password, user["password_hash"]):
             raise HTTPException(status_code=FORBIDDEN, detail="Неверный пароль")
 
-        cursor.execute(
-            "UPDATE bookings SET status = 0 WHERE id = ? and status = 1",
-            (booking_id,)
-        )
+        booking = cursor.execute(
+            "SELECT id, username FROM bookings WHERE id = ? AND status = 1", (booking_id,)
+        ).fetchone()
 
-        if cursor.rowcount == 0:
+        if not booking:
             raise HTTPException(
                 status_code=NOT_FOUND,
                 detail="Брони не существует, либо она уже была отменена"
             )
-        
+
+        if booking["username"] != username:
+            raise HTTPException(
+                status_code=FORBIDDEN,
+                detail="Вы можете отменять только свои брони"
+            )
+
+        cursor.execute(
+            "UPDATE bookings SET status = 0 WHERE id = ?",
+            (booking_id,)
+        )
         conn.commit()
 
     return None
